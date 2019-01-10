@@ -1,5 +1,3 @@
-package com.company;
-
 public class Model implements Comparable<Model>{
     public String crime_id;
     public String month;
@@ -48,6 +46,18 @@ public class Model implements Comparable<Model>{
     @Override
     public int compareTo(Model o) {
         return o.crime_type.hashCode();
+    }
+
+    public String getMonth(){
+        return month;
+    }
+
+    public String getCrimeType(){
+        return crime_type;
+    }
+
+    public String getLsoaCode(){
+        return lsoa_code;
     }
 }
 

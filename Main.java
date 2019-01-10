@@ -1,16 +1,14 @@
-package com.company;
-
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        Process process=new Process();
+    	final long startTime = System.currentTimeMillis();
+    	Process process=new Process();
 
         Scanner scan = new Scanner(System.in);
         String read;
         while (true){
-            System.out.print("please enter feature set type(A-F,q for quit):");
-            read = scan.nextLine();
+            read = IO.readString("please enter feature set type(A-F,q for quit):");
             if(read.equals("q")){
                 break;
             }
@@ -19,15 +17,10 @@ public class Main {
                     process.FeatureA();
                     break;
                 case "B":
-                    process.FeatureA();
-                    System.out.print("please specified the crime type above you want to display:");
-                    read = scan.nextLine();
-                    process.FeatureB(read);
+                    process.FeatureB();
                     break;
                 case "C":
-                    System.out.print("please specified a month to display:");
-                    read = scan.nextLine();
-                    process.FeatureC(read);
+                    process.FeatureC();
                     break;
                 case "D":
                     process.FeatureD();
@@ -36,12 +29,11 @@ public class Main {
                     process.FeatureE();
                     break;
                 case "F":
-                    process.FeatureA();
-                    System.out.print("please specified the crime type above you want to display:");
-                    read = scan.nextLine();
-                    process.FeatureF(read);
+                    process.FeatureF();
                     break;
             }
+            final long duration = System.currentTimeMillis() - startTime;
+            System.out.println("running time" + duration + "ms");
         }
 
 

@@ -1,32 +1,25 @@
-package com.company;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.lang.System.exit;
 
 
 public class Process {
     public List<Model> records;
-    public List<CrimeType> crime_types;
-    public List<LSOACode> lsoa_codes;
-
 
     public Process(){
         records=new ArrayList<>();
-        crime_types=new ArrayList<>();
-        lsoa_codes=new ArrayList<>();
-        String datapath = System.getProperty("user.dir")+"\\data";
+        String datapath = "/Users/ragdoll/Desktop/secound year/data";
         GetData(datapath);
     }
 
     public void GetData(String datapath){
+    	final long startTime = System.currentTimeMillis();
         System.out.println("reading data...");
         File file=new File(datapath);
         if(!file.isDirectory()){
@@ -64,9 +57,9 @@ public class Process {
                             br.close();
                         }catch (IOException e){
                             e.printStackTrace();
-                        }finally {
-
                         }
+                        final long duration = System.currentTimeMillis() - startTime;
+                        System.out.println("running time" + duration + "ms");
                     }
                 }
             }
@@ -75,42 +68,58 @@ public class Process {
         System.out.println("reading done...");
     }
 
+    private Map<String, List<Model>> getRecordG(){
+        return records.stream().collect(Collectors.groupingBy(Model::getCrimeType));
+    }
+
+    private List<String> getCrimeType(){
+        List<String> result=new ArrayList<>(getRecordG().keySet());
+        Collections.sort(result);
+        return result;
+    }
+
     public void FeatureA(){
-        crime_types.clear();
-        for(Model m:records){
-            CrimeType c=new CrimeType(m.crime_type);
-            int index= Collections.binarySearch(crime_types,c );
-            if(index<0){
-                crime_types.add(c);
-            }
-        }
+        List<String> ctype=getCrimeType();
         System.out.println("all crime type is below:");
-        for(CrimeType c:crime_types){
-            System.out.print(c.type+"\t\t");
+        for(String o:ctype){
+            System.out.println(o);
         }
         System.out.println();
     }
 
-    public void FeatureB(String type){
-        int index= Collections.binarySearch(crime_types,new CrimeType(type));
-        if(index<0){
-            System.out.println("donot find the type you specified.");
+    public void FeatureB(){
+        List<String> ctype=getCrimeType();
+        if(ctype.size()==0){
+            System.out.println("no crime type here\n");
             return;
         }
-        System.out.println("the detail crime of type "+type+" is below:");
+        for(int i=1;i<=ctype.size();i++){
+            System.out.println(String.format("[%d]: %s",i,ctype.get(i-1)));
+        }
+        int type=IO.readInt("please specified the crime type above you want to display:",ctype.size());
+        System.out.println("the detail crime of type "+ctype.get(type-1)+" is below:");
         for(Model m:records){
-            if(m.crime_type.equals(type)){
+            if(m.crime_type.equals(ctype.get(type-1))){
                 System.out.println(m);
             }
         }
+        System.out.println();
     }
 
-    public void FeatureC(String month){
-        boolean found=false;
+    public void FeatureC(){
+        List<String> months=new ArrayList<>(records.stream().collect(Collectors.groupingBy(Model::getMonth)).keySet());
+        if(months.size()==0){
+            System.out.println("no month here\n");
+            return;
+        }
+        Collections.sort(months);
+        for(int i=1;i<=months.size();i++){
+            System.out.println(String.format("[%d]: %s", i,months.get(i-1)));
+        }
+        int month=IO.readInt("please specified a month to display:",months.size());
         int count1=0,count2=0;
         for(Model m : records){
-            if(m.month.equals(month)){
-                found=true;
+            if(m.month.equals(months.get(month-1))){
                 if(m.last_outcome_category.equals("Under investigation")){
                     count1++;
                 }else if(m.last_outcome_category.equals("Investigation complete; no suspect identified")){
@@ -118,71 +127,81 @@ public class Process {
                 }
             }
         }
-        if(!found){
-            System.out.println("donot found data of the month given.");
-        }else{
-            System.out.println("Count of Under investigation is: "+count1);
-            System.out.println("Count of Investigation complete; no suspect identified is: "+count2);
-        }
+        System.out.println("Count of Under investigation is: "+count1);
+        System.out.println("Count of Investigation complete; no suspect identified is: "+count2);
+        System.out.println();
     }
 
     public void FeatureD(){
-        lsoa_codes.clear();
-        for (Model m:records){
-            LSOACode l=new LSOACode(m.lsoa_code);
-            int index= Collections.binarySearch(lsoa_codes,l);
-            if(index<0){
-                lsoa_codes.add(l);
-                lsoa_codes.sort(Comparator.comparing(o -> o.code));
-            }else{
-                lsoa_codes.get(index).count++;
+        Map<String, List<Model>> collect = records.stream().collect(Collectors.groupingBy(Model::getLsoaCode));
+        int maxcount=0;
+        String code=null;
+        for(Map.Entry<String,List<Model>> entrt:collect.entrySet()){
+            if(entrt.getValue().size()>maxcount){
+                maxcount=entrt.getValue().size();
+                code=entrt.getKey();
             }
         }
-        LSOACode rlt=Collections.max(lsoa_codes,Comparator.comparing(o -> o.count));
-        System.out.print("the LSOA code with the highest average total crime frequency is:");
-        System.out.println(rlt.code+"\t"+rlt.count);
+        System.out.println(String.format("the LSOA code with the highest average total crime frequency is [code]: %s , [count]: %d", code,maxcount));
+        String ans=IO.readString("show the detail? ('Y/y' for yes,others for no):");
+        if(ans.toLowerCase().startsWith("y")){
+            List<Model> value=collect.get(code);
+            for(Model m:value){
+                System.out.println(m);
+            }
+        }
+        System.out.println();
     }
 
     public void FeatureE(){
-        lsoa_codes.clear();
-        for (Model m:records){
-            if(m.last_outcome_category.equals("Investigation complete; no suspect identified")){
-                LSOACode l=new LSOACode(m.lsoa_code);
-                int index= Collections.binarySearch(lsoa_codes,l);
-                if(index<0){
-                    lsoa_codes.add(l);
-                    lsoa_codes.sort(Comparator.comparing(o -> o.code));
-                }else{
-                    lsoa_codes.get(index).count++;
-                }
+        Map<String, List<Model>> collect = records.stream().filter(m -> m.last_outcome_category.equals("Investigation complete; no suspect identified")).collect(Collectors.groupingBy(Model::getLsoaCode));
+        int maxcount=0;
+        String code=null;
+        for(Map.Entry<String,List<Model>> entrt:collect.entrySet()){
+            if(entrt.getValue().size()>maxcount){
+                maxcount=entrt.getValue().size();
+                code=entrt.getKey();
             }
         }
-        LSOACode rlt=Collections.max(lsoa_codes,Comparator.comparing(o -> o.count));
-        System.out.print("the LSOA code with the highest average unresolved crime frequency is:");
-        System.out.println(rlt.code+"\t"+rlt.count);
+        System.out.println(String.format("the LSOA code with the highest average unresolved crime frequency is [code]: %s , [count]: %d", code,maxcount));
+        String ans=IO.readString("show the detail? ('Y/y' for yes,others for no):");
+        if(ans.toLowerCase().startsWith("y")){
+            List<Model> value=collect.get(code);
+            for(Model m:value){
+                System.out.println(m);
+            }
+        }
+        System.out.println();
     }
 
-    public void FeatureF(String type){
-        int index= Collections.binarySearch(crime_types,new CrimeType(type));
-        if(index<0){
-            System.out.println("donot find the type you specified.");
+    public void FeatureF(){
+        List<String> ctype=getCrimeType();
+        if(ctype.size()==0){
+            System.out.println("no crime type here\n");
             return;
         }
-        lsoa_codes.clear();
-        for (Model m:records){
-            if(m.crime_type.equals(type)){
-                LSOACode l=new LSOACode(m.lsoa_code);
-                index= Collections.binarySearch(lsoa_codes,l);
-                if(index<0){
-                    lsoa_codes.add(l);
-                    lsoa_codes.sort(Comparator.comparing(o -> o.code));
-                }else{
-                    lsoa_codes.get(index).count++;
-                }
+        for(int i=1;i<=ctype.size();i++){
+            System.out.println(String.format("[%d]: %s",i,ctype.get(i-1)));
+        }
+        int type=IO.readInt("please specified the crime type above you want to display:",ctype.size());
+
+        Map<String, List<Model>> collect = records.stream().filter(m -> m.crime_type.equals(ctype.get(type-1))).collect(Collectors.groupingBy(Model::getLsoaCode));
+        int maxcount=0;
+        String code=null;
+        for(Map.Entry<String,List<Model>> entrt:collect.entrySet()){
+            if(entrt.getValue().size()>maxcount){
+                maxcount=entrt.getValue().size();
+                code=entrt.getKey();
             }
         }
-        LSOACode rlt=Collections.max(lsoa_codes,Comparator.comparing(o -> o.count));
-        System.out.print("the LSOA code with the highest crime frequency for a user-specified crime type "+type+" is:");
-        System.out.println(rlt.code+"\t"+rlt.count);
+        System.out.println(String.format("the LSOA code with the highest crime frequency for a user-specified crime type [%s] is [code]: %s , [count]: %d",ctype.get(type-1), code,maxcount));
+        String ans=IO.readString("show the detail? ('Y/y' for yes,others for no):");
+        if(ans.toLowerCase().startsWith("y")){
+            List<Model> value=collect.get(code);
+            for(Model m:value){
+                System.out.println(m);
+            }
+        }
+        System.out.println();
     }
 }
